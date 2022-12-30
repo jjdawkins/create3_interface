@@ -11,7 +11,7 @@ my_create = IRobotCreate('')
 
 def run_loop():
     """
-    run_loop function infinitely runs an audio sequence as long
+    run_loop function runs an audio sequence as long
     as rclpy is at status ok.
     """
     
