@@ -4,6 +4,7 @@ import quaternion
 
 import rclpy
 from rclpy.node import Node
+from rclpy.action import ActionClient
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, LivelinessPolicy, DurabilityPolicy
 from std_msgs.msg import String
@@ -11,6 +12,7 @@ from geometry_msgs.msg import Twist,PoseStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, BatteryState
 from irobot_create_msgs.msg import *
+from irobot_create_msgs.action import *
 
 red_code = LedColor(red=255,green=0,blue=0)
 orange_code = LedColor(red=255,green=0,blue=0)
@@ -28,8 +30,8 @@ qos_profile = QoSProfile(
 class IRobotCreate(Node):
     """
     IRobotCreate() creates a Python interface with the create3
-    
-    This class acts as a wrapper to subscribe and publish to the 
+
+    This class acts as a wrapper to subscribe and publish to the
     create3's ROS2 topics. Running the class requires the machine
     to have ROS2 installed and be on the same network as the
     create.
@@ -66,7 +68,7 @@ class IRobotCreate(Node):
     battery_percentage : float, battery charge percentage
     vel_cmd : ROS Twist message to send velocity commands
     name_prefix : name given to robot_name
-    
+
     Methods
     -------
     set_audio(freq -> int, dur -> float)
@@ -79,15 +81,15 @@ class IRobotCreate(Node):
     set_armed(val -> bool)
         arms or disarms the create
     """
-    
+
     def __init__(self,robot_name):
         """This method initializes the class object and creates
         subscriber and publisher objects to interface with the
         create3's ROS2 topics.
         """
-        
+
         super().__init__('irobot_create_interface')
-        
+
         # Define Status Flags
         self.is_armed = False
         self.is_stopped = True
@@ -97,7 +99,7 @@ class IRobotCreate(Node):
         self.dock_visible = False
         self.wheels_enabled = False
 
-        # Variables for IMU 
+        # Variables for IMU
         self.imu_accel = np.zeros(3)
         self.imu_gyro = np.zeros(3)
         self.imu_quat = np.quaternion(1,0,0,0)
@@ -129,11 +131,16 @@ class IRobotCreate(Node):
         self.vel_cmd = Twist()
 
         self.name_prefix = robot_name
-    
+
         # Set up Publishers for create commands
         self.cmd_vel_pub = self.create_publisher(Twist, self.name_prefix+'/cmd_vel', qos_profile)
         self.led_pub = self.create_publisher(LightringLeds,self.name_prefix+'/cmd_lightring', qos_profile)
-        self.audio_pub = self.create_publisher(AudioNoteVector,self.name_prefix+'/cmd_audio', qos_profile) 
+        self.audio_pub = self.create_publisher(AudioNoteVector,self.name_prefix+'/cmd_audio', qos_profile)
+
+        # Set up Action clients
+        self.undock_act = ActionClient(self,Undock,'undock')
+
+        self.dock_act = ActionClient(self,DockServo,'dock')
 
         # Set up Sensor Subscribers
         self.ir_sens_sub = self.create_subscription(IrIntensityVector,self.name_prefix+'/ir_intensity',self.ir_intensity_callback,qos_profile)
@@ -162,17 +169,17 @@ class IRobotCreate(Node):
 
     def imu_callback(self,msg):
         """Establishes a callback function to parse IMU data as it
-        
+
         Establishes a callback function to parse IMU data as it is
         published by the create3 and update the class variables
         accordingly.
         """
-        
+
         # update IMU accel variables
         self.imu_accel[0]= msg.linear_acceleration.x
         self.imu_accel[1] = msg.linear_acceleration.y
         self.imu_accel[2] = msg.linear_acceleration.z
-        
+
         # update IMU gyro variables
         self.imu_gyro[0]= msg.angular_velocity.x
         self.imu_gyro[1] = msg.angular_velocity.y
@@ -189,41 +196,41 @@ class IRobotCreate(Node):
 
     def mocap_callback(self,msg):
         """Establishes a callback function to parse mocap data
-        
+
         Establishes a callback function to parse mocap data as
-        it is published by the create3 and updates the class 
+        it is published by the create3 and updates the class
         variables accordingly.
         """
-        
+
         self.mocap_pos[0] = msg.pose.position.x
         self.mocap_pos[1] = msg.pose.position.y
         self.mocap_pos[2] = msg.pose.position.z
 
-        self.mocap_quat = np.quaternion(msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z) 
+        self.mocap_quat = np.quaternion(msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z)
         R = quaternion.as_rotation_matrix(self.mocap_quat)
 
         self.mocap_eul[2] =  math.atan2(R[1][0],R[0][0])
         self.mocap_eul[1] = -math.asin(R[2][0])
-        self.mocap_eul[0] = math.atan2(R[2][1],R[2][2])        
+        self.mocap_eul[0] = math.atan2(R[2][1],R[2][2])
 
     def odom_callback(self,msg):
         """Establishes a callback function to parse odom data
-        
+
         Establishes a callback function to parse odom data as it is
         published by the create3 and update the class variables
         accordingly.
         """
-        
+
         self.odom_pos[0] = msg.pose.pose.position.x
         self.odom_pos[1] = msg.pose.pose.position.y
         self.odom_pos[2] = msg.pose.pose.position.z
 
-        self.odom_quat = np.quaternion(msg.pose.pose.orientation.w,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z) 
+        self.odom_quat = np.quaternion(msg.pose.pose.orientation.w,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z)
         R = quaternion.as_rotation_matrix(self.odom_quat)
 
         self.odom_eul[2] =  math.atan2(R[1][0],R[0][0])
         self.odom_eul[1] = -math.asin(R[2][0])
-        self.odom_eul[0] = math.atan2(R[2][1],R[2][2])  
+        self.odom_eul[0] = math.atan2(R[2][1],R[2][2])
 
         self.odom_vel[0] = msg.twist.twist.linear.x
         self.odom_vel[1] = msg.twist.twist.linear.y
@@ -231,38 +238,38 @@ class IRobotCreate(Node):
 
         self.odom_omega[0] = msg.twist.twist.angular.x
         self.odom_omega[1] = msg.twist.twist.angular.y
-        self.odom_omega[2] = msg.twist.twist.angular.z  
-    
+        self.odom_omega[2] = msg.twist.twist.angular.z
+
     def wheeltick_callback(self,msg):
         """Callback function to parse wheel encoder data
-        
+
         Establishes a callback function to parse wheel encoder
         data as it is published by the create3 and update the
         class variables accordingly.
         """
-        
+
         self.wheel_ticks[0] = msg.ticks_left
         self.wheel_ticks[1] = msg.ticks_right
 
     def wheelvels_callback(self,msg):
         """Callback function to parse wheel velocity data
-        
+
         Establishes a callback function to parse wheel speed
         data as it is published by the create3 and update the
         class variables accordingly.
         """
-        
+
         self.wheel_vel[0] = msg.velocity_left
         self.wheel_vel[1] = msg.velocity_right
 
     def wheel_status_callback(self,msg):
         """Callback function to parse wheel status
-        
+
         Establishes a callback function to parse wheel status
         data as it is published by the create3 and update the
         class variables accordingly.
         """
-        
+
         self.wheels_enabled = msg.wheels_enabled
         self.motor_pwm[0] = msg.pwm_left
         self.motor_pwm[1] = msg.pwm_right
@@ -271,88 +278,88 @@ class IRobotCreate(Node):
 
     def kidnap_callback(self,msg):
         """Callback function to parse kidnap status
-        
+
         Establishes a callback function to parse kidnap data
         as it is published by the create3 and update the class
         variables accordingly.
         """
-        
+
         self.is_carried = msg.is_kidnapped
 
     def dock_callback(self,msg):
         """Callback function to parse docking status
-        
+
         Establishes a callback function to parse docking status
         published by the create3 and update the class variables
         accordingly.
         """
-        
+
         self.dock_visible = msg.dock_visible
         self.is_docked = msg.is_docked
-    
+
     def slip_callback(self,msg):
         """Callback function to parse slip status of wheels
-        
+
         Establishes a callback function to parse slip status
         published by the create3 and update the class variables
         accordingly.
         """
-        
+
         self.is_slipping = msg.is_slipping
 
     def stop_callback(self,msg):
         """Callback function to parse stop status
-        
+
         Establishes a callback function to parse stop status
         published by the create3 and update the class variables
         accordingly.
         """
-        
+
         self.is_stopped = msg.is_stopped
 
     def hazard_callback(self,msg):
         """Callback function to parse hazard status
-        
+
         Establishes a callback function to parse hazard status
         published by the create3 and update the class variables
         accordingly.
         """
-        
+
         msg
         #for detect in msg.detections:
             #print detect
 
     def ir_intensity_callback(self,msg):
         """Callback function to parse IR intensity sensors
-        
+
         Establishes a callback function to parse infrared sensor
         intensity data published by the create3 and update the
         class variables accordingly.
         """
-        
+
         #print(msg)
         for i in range(7):
             self.ir_intensity[i] = msg.readings[i].value
 
     def mouse_callback(self,msg):
         """Callback function to parse integrated x-y odometry
-        
+
         Establishes a callback function to parse x-y odometry
         data published by the create3 and update the class
         variables accordingly.
         """
-        
+
         self.mouse_odom[0] = msg.integrated_x
         self.mouse_odom[1] = msg.integrated_y
 
     def battery_callback(self,msg):
         """Callback function to parse battery status
-        
+
         Establishes a callback function to parse battery
         data published by the create3 and update the class
         variables accordingly.
         """
-        
+
         self.battery_voltage = msg.voltage
         self.battery_temp = msg.temperature
         self.battery_current = msg.current
@@ -361,7 +368,7 @@ class IRobotCreate(Node):
 
     def button_callback(self,msg):
         """Callback function to parse button press data
-        
+
         Establishes a callback function to parse button
         press data published by the create3 and update the
         class variables accordingly.
@@ -372,7 +379,7 @@ class IRobotCreate(Node):
 
     def set_audio(self,freq,dur):
         """set speaker status on create
-        
+
         Method to set the speaker tone (frequency) as
         an integer and duration in seconds.
         """
@@ -385,20 +392,20 @@ class IRobotCreate(Node):
         note = AudioNote()
         note.frequency = freq
         note.max_runtime.sec = secs
-        note.max_runtime.nanosec = nsecs        
-        
+        note.max_runtime.nanosec = nsecs
+
         audio_msg.notes.append(note)
 
         self.audio_pub.publish(audio_msg)
 
     def set_ledcmd(self,R,G,B):
-        """set LED status of create
-        
+        """set status of all LEDs simultaneously
+
         Method to set the create's LEDs color
         to the colorspecified by the red (integer)
         green (integer) and blue (integer) values
         """
-        
+
         color = LedColor(red=R,green=G,blue=B)
         ring = LightringLeds()
         for i in range(6):
@@ -407,30 +414,67 @@ class IRobotCreate(Node):
         ring.override_system = True
         self.led_pub.publish(ring)
 
+    def set_ledindivcmd(self,R,G,B):
+        """set status of LED independently
+
+        Method to set the create's LEDs color
+        to the colorspecified by the red (integer)
+        green (integer) and blue (integer) values
+        """
+
+
+        ring = LightringLeds()
+        for i in range(6):
+            color = LedColor(red=R[i],green=G[i],blue=B[i])
+            ring.leds[i]= color
+
+        ring.override_system = True
+        self.led_pub.publish(ring)
+
+
     def set_velcmd(self,vel,yaw_rate):
         """set the velocity of the vehicle
-        
+
         Method to set the create's velocity by its
-        forward speed vel (float) and its yaw rate 
+        forward speed vel (float) and its yaw rate
         yaw_rate (float).
         """
-        
+
         cmd_msg = Twist()
         cmd_msg.linear.x = vel
-        cmd_msg.angular.z = yaw_rate    
+        cmd_msg.angular.z = yaw_rate
         self.cmd_vel_pub.publish(cmd_msg)
-    
+
     def set_armed(self,val):
         """set arming status of create
-        
+
         Method to set the create's armed or disarmed
         status to the boolean value val
         """
-        
+
         self.is_armed = val
 
+    def undock(self):
+        goal_msg = Undock.Goal()
+        print(goal_msg)
+
+        self.undock_act.wait_for_server()
+
+        self.undock_act.send_goal_async(goal_msg)
+
+    def dock(self):
+        goal_msg = DockServo.Goal()
+        print(goal_msg)
+
+        print("waiting for server")
+        self.dock_act.wait_for_server()
+        print("found it")
+        self.dock_act.send_goal_async(goal_msg)
+        print("sent it")
+
+
     def timer_callback(self):
-        
+
         if(self.is_armed):
-            
+
             self.cmd_vel_pub.publish(self.vel_cmd)
