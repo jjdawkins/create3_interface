@@ -418,8 +418,17 @@ class IRobotCreate(Node):
         """set status of LED independently
 
         Method to set the create's LEDs color
-        to the colorspecified by the red (integer)
-        green (integer) and blue (integer) values
+        to the colorspecified by the red (1x6 array
+        of integers between 0 and 255), green (1x6
+        array of integers between 0 and 255), and
+        blue (1x6 array of integers between 0 and
+        255) values
+
+        usage example:
+            R = [0,127,255,0,127,255]
+            G = [255,0,127,255,0,127]
+            B = [127,255,0,127,255,0]
+            my_create.set_ledindivcmd(R,G,B)
         """
 
 
