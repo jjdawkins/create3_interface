@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import quaternion
-
+# Import all the necessary libraries
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
@@ -14,12 +14,14 @@ from sensor_msgs.msg import Imu, BatteryState
 from irobot_create_msgs.msg import *
 from irobot_create_msgs.action import *
 
+# Establish Python objects corresponding to specified colors
 red_code = LedColor(red=255,green=0,blue=0)
 orange_code = LedColor(red=255,green=0,blue=0)
 white_code = LedColor(red=255,green=255,blue=255)
 blue_code =  LedColor(red=0,green=0,blue=255)
 cyan_code =  LedColor(red=0,green=255,blue=255)
 
+# Define quality of service profile for Create robot communication
 qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             liveliness=LivelinessPolicy.AUTOMATIC,
@@ -68,6 +70,11 @@ class IRobotCreate(Node):
     battery_percentage : float, battery charge percentage
     vel_cmd : ROS Twist message to send velocity commands
     name_prefix : name given to robot_name
+    
+    To access the data in an attribute use object_name.attribute
+    For example, for an object named my_create, you can access the
+    battery voltage attribute using the syntax:
+        vltge = my_create.battery_voltage
 
     Methods
     -------
@@ -80,6 +87,12 @@ class IRobotCreate(Node):
         sets the speed to vel and yaw rate to yaw_rate
     set_armed(val -> bool)
         arms or disarms the create
+    set_ledindivcmd(R -> 1x6 int array,G->1x6 int array,B-> 1x6 int array)
+        sets each of the six individual LEDs around the ring
+    dock()
+        Invoke automatic docking routine on Create
+    undock()
+        Invoke automative undocking routine on Create
     """
 
     def __init__(self,robot_name):
@@ -139,7 +152,6 @@ class IRobotCreate(Node):
 
         # Set up Action clients
         self.undock_act = ActionClient(self,Undock,'undock')
-
         self.dock_act = ActionClient(self,DockServo,'dock')
 
         # Set up Sensor Subscribers
@@ -150,8 +162,7 @@ class IRobotCreate(Node):
         self.wheel_vel_sub = self.create_subscription(WheelVels,self.name_prefix+'/wheel_vels',self.wheelvels_callback,qos_profile)
         self.mocap_sub = self.create_subscription(PoseStamped,self.name_prefix+'/pose',self.mocap_callback,qos_profile)
 
-
-        # Se up Status Subscribers
+        # Set up Status Subscribers
         self.batt_sub = self.create_subscription(BatteryState,self.name_prefix+'/battery_state',self.battery_callback,qos_profile)
         self.button_sub = self.create_subscription(InterfaceButtons,self.name_prefix+'/interface_buttons',self.button_callback,qos_profile)
         self.mouse_sub = self.create_subscription(Mouse,self.name_prefix+'/mouse',self.mouse_callback,qos_profile)
@@ -404,6 +415,9 @@ class IRobotCreate(Node):
         Method to set the create's LEDs color
         to the colorspecified by the red (integer)
         green (integer) and blue (integer) values
+        
+        usage example:
+            my_create.set_ledcmd(255,0,0) # set all LEDs in ring to red
         """
 
         color = LedColor(red=R,green=G,blue=B)
@@ -465,21 +479,18 @@ class IRobotCreate(Node):
 
     def undock(self):
         goal_msg = Undock.Goal()
-        print(goal_msg)
-
+        #print(goal_msg)
         self.undock_act.wait_for_server()
-
         self.undock_act.send_goal_async(goal_msg)
 
     def dock(self):
         goal_msg = DockServo.Goal()
-        print(goal_msg)
-
-        print("waiting for server")
+        #print(goal_msg)
+        #print("waiting for server")
         self.dock_act.wait_for_server()
-        print("found it")
+        #print("found it")
         self.dock_act.send_goal_async(goal_msg)
-        print("sent it")
+        #print("sent it")
 
 
     def timer_callback(self):
