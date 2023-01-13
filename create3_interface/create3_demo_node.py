@@ -20,7 +20,7 @@ def run_loop():
     my_create.set_armed(True)
     
     # forward speed
-    spd = 0.2
+    spd = 0.1
     # yaw rate magnitude variable
     yaw_rate = 0.0*math.pi/2
     # Get current clock time off of Create and set it as initial time
@@ -65,7 +65,7 @@ def run_loop():
 
         #print(my_create.imu_accel)  # (1x3) gravity compensated accelerometer data from robot
         #print(my_create.imu_gyro)   # (1x3) gyro datea from robot
-        print(my_create.mouse_odom) # (1x2) Mouse sensor odometry x and y 
+        #print(my_create.mouse_odom) # (1x2) Mouse sensor odometry x and y 
         #print(my_create.ir_intensity) #(1x7) Array of IR sensors from left to right
         time.sleep(0.1)
 
