@@ -151,8 +151,8 @@ class IRobotCreate(Node):
         self.audio_pub = self.create_publisher(AudioNoteVector,self.name_prefix+'/cmd_audio', qos_profile)
 
         # Set up Action clients
-        self.undock_act = ActionClient(self,Undock,'undock')
-        self.dock_act = ActionClient(self,DockServo,'dock')
+        self.undock_act = ActionClient(self,Undock,self.name_prefix+'/undock')
+        self.dock_act = ActionClient(self,DockServo,self.name_prefix+'/dock')
 
         # Set up Sensor Subscribers
         self.ir_sens_sub = self.create_subscription(IrIntensityVector,self.name_prefix+'/ir_intensity',self.ir_intensity_callback,qos_profile)
@@ -486,11 +486,11 @@ class IRobotCreate(Node):
     def dock(self):
         goal_msg = DockServo.Goal()
         #print(goal_msg)
-        #print("waiting for server")
+        print("waiting for server")
         self.dock_act.wait_for_server()
-        #print("found it")
+        print("found server, sending docking command")
         self.dock_act.send_goal_async(goal_msg)
-        #print("sent it")
+        print("docking command accepted...Please wait for dock to finish")
 
 
     def timer_callback(self):
