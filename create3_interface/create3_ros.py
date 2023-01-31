@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import time
 import quaternion
 # Import all the necessary libraries
 import rclpy
@@ -173,6 +174,7 @@ class IRobotCreate(Node):
         self.stop_sub = self.create_subscription(StopStatus,self.name_prefix+'/stop_status',self.stop_callback,qos_profile)
         self.dock_sub = self.create_subscription(Dock,self.name_prefix+'/dock',self.dock_callback,qos_profile)
 
+        time.sleep(1)
         timer_period = 0.1  # seconds
         #self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
