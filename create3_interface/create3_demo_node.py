@@ -8,7 +8,7 @@ from create3_ros import IRobotCreate
 # Initialize ros2 client library
 rclpy.init()
 # Establish IRobotCreate object
-my_create = IRobotCreate('')
+my_create = IRobotCreate('create_1')
 
 def run_loop():
     """
@@ -20,9 +20,9 @@ def run_loop():
     my_create.set_armed(True)
     
     # forward speed
-    spd = 0.1
+    spd = 0.0
     # yaw rate magnitude variable
-    yaw_rate = 0.0*math.pi/2
+    yaw_rate = 0.4*math.pi/2
     # Get current clock time off of Create and set it as initial time
     init_time = my_create.get_clock().now()
     
