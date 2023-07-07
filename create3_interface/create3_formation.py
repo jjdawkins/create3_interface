@@ -40,8 +40,8 @@ class swarmNode(createSwarm):
     def __init__(self,robot_name):
         # Establish IRobotCreate object
         self.robot = robot_name
-        self.team = ['create_1','create_2','create_3','create_4']
-#        self.team = ['create_1','create_3','create_4']
+#        self.team = ['create_1','create_2','create_3','create_4']
+        self.team = ['create_4','create_1','create_2']
 
         #self.team = ['create_1']
 
@@ -68,14 +68,17 @@ class swarmNode(createSwarm):
         self.cruise_spd = 1
         self.Ka = 0.6
         # Gain Matricies {x,y,theta}
-        self.Kp = np.diag([1.0,1.0,5.0])
-        self.Kv = np.diag([0.3,0.3,3.0])
-        self.Kp_L = np.diag([0.3,0.3,0,0.3])
-        self.Kv_L = np.diag([0.1,0.1,0.1])        
-        self.Cp = np.diag([5.0,5.0,1.5])
-        self.Cv = np.diag([1.0,1.0,0.1])
+        self.Kp = np.diag([5.0,5.0,1.0])
+        self.Kv = np.diag([0.75,0.75,1.0])      
+        self.Cp = np.diag([2.5,2.5,1.5])
+        self.Cv = np.diag([0.8,0.8,0.8])
+
+        #self.Kp = np.diag([1.5,1.5,1.5])
+        #self.Kv = np.diag([0.5,0.5,0.5])      
+        #self.Cp = np.diag([0.5,0.5,0.5])
+        #self.Cv = np.diag([0.5,0.5,0.5])        
         self.Kyaw = 1.5
-        self.L = 0.2
+        self.L = 0.15
         self.sens_rad = 0.5
         self.avoid_rad = 0.2
         self.eta = 3
@@ -84,20 +87,20 @@ class swarmNode(createSwarm):
         self.w  = 0
 #        self.psi_dist += - self.w*self.eta*self.dt + np.sqrt(self.dt)*self.sigma*np.random.randn()  
 
-        self.is_leader = True # Give All robots acces to the trajectory
+        #self.is_leader = False # Give All robots acces to the trajectory
 
         self.formation = {}
         self.formation[self.team[0]]= np.zeros(3)
         self.formation[self.team[1]]= np.array([1.0,0,0])
         self.formation[self.team[2]]= np.array([1.0,1.0,0])
-        self.formation[self.team[3]]= np.array([0.0,1.0,0])        
+  #      self.formation[self.team[3]]= np.array([0.0,1.0,0])        
 
                 
         self.laplacian = {}
-        self.laplacian[self.team[0]] = 0.0*np.array([0,1,1,1])
-        self.laplacian[self.team[1]] = np.array([1,0,1,1])
-        self.laplacian[self.team[2]] = np.array([1,1,0,1])
-        self.laplacian[self.team[3]] = np.array([1,1,1,0]) 
+        self.laplacian[self.team[0]] = 0*np.array([0,1,0,0])
+        self.laplacian[self.team[1]] = np.array([1,0,1,0])
+        self.laplacian[self.team[2]] = np.array([1,1,0,0])
+ #       self.laplacian[self.team[3]] = np.array([1,0,1,0]) 
         self.dt = 0.1       
         self.timer = self.create_timer(self.dt, self.control_update)
 
@@ -164,22 +167,23 @@ class swarmNode(createSwarm):
                     
 
                     if(self.is_leader):
-                        mu_x = self.laplacian[self.robot][ii]*(-self.Kp[0][0]*(form_err[0]) - self.Kv[0][0]*(self.mocap_odom_vel_g[0] - lead_vel[0][0])) - 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[0]
-                        mu_y = self.laplacian[self.robot][ii]*(-self.Kp[1][1]*(form_err[1]) - self.Kv[1][1]*(self.mocap_odom_vel_g[1] - lead_vel[0][1])) - 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[1]                        
+                        mu_x = self.laplacian[self.robot][ii]*(-self.Kp[0][0]*(form_err[0]) - self.Kv[0][0]*(self.mocap_odom_vel_g[0] - lead_vel[0][0])) - self.Cv[0][0]*(self.mocap_odom_vel_g[0] - self.team_des_vel[0])- 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[0]
+                        mu_y = self.laplacian[self.robot][ii]*(-self.Kp[1][1]*(form_err[1]) - self.Kv[1][1]*(self.mocap_odom_vel_g[1] - lead_vel[0][1])) - self.Cv[1][1]*(self.mocap_odom_vel_g[1] - self.team_des_vel[1]) - 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[1]                        
                         cmd_yaw = math.atan2(mu_y,mu_x)
                         form_yaw_err = wrapToPi(self.mocap_odom_eul[2]-cmd_yaw)                        
-                        mu_r = self.laplacian[self.robot][ii]*(-self.Kp[2][2]*form_yaw_err  - 0*self.Kv[2][2]*(self.mocap_odom_omega[2] - lead_omega[0][2])) 
+                        mu_r = self.laplacian[self.robot][ii]*(-self.Kp[2][2]*form_yaw_err  - 0*self.Kv[2][2]*(self.mocap_odom_omega[2] - lead_omega[0][2])) - self.Cv[2][2]*(self.odom_omega[2]-self.team_des_vel[2])
 
                     else:
-                        mu_x = self.laplacian[self.robot][ii]*(-self.Kp[0][0]*(form_err[0]) - self.Kv[0][0]*(self.mocap_odom_vel_g[0] - lead_vel[0][0])) - 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[0]
-                        mu_y = self.laplacian[self.robot][ii]*(-self.Kp[1][1]*(form_err[1]) - self.Kv[1][1]*(self.mocap_odom_vel_g[1] - lead_vel[0][1])) - 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[1]
+                        mu_x = self.laplacian[self.robot][ii]*(-self.Kp[0][0]*(form_err[0]) - self.Kv[0][0]*(self.mocap_odom_vel_g[0] - lead_vel[0][0])) - self.Cv[0][0]*(self.mocap_odom_vel_g[0] - self.team_des_vel[0]) - 0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[0]
+                        mu_y = self.laplacian[self.robot][ii]*(-self.Kp[1][1]*(form_err[1]) - self.Kv[1][1]*(self.mocap_odom_vel_g[1] - lead_vel[0][1])) - self.Cv[1][1]*(self.mocap_odom_vel_g[1] - self.team_des_vel[1]) -0*pot_col_avoid(self.avoid_rad,self.sens_rad,avoid_dist)*avoid_err[1]
                         cmd_yaw = math.atan2(mu_y,mu_x)
                         form_yaw_err = wrapToPi(self.mocap_odom_eul[2]-cmd_yaw)
-                        mu_r = self.laplacian[self.robot][ii]*(-self.Kp[2][2]*form_yaw_err - 0*self.Kp[2][2]*form_yaw_err_2*(1-dr) - 0*self.Kv[2][2]*(self.mocap_odom_omega[2] - lead_omega[0][2])) 
-                    
+                        mu_r = self.laplacian[self.robot][ii]*(-self.Kp[2][2]*form_yaw_err - 0*self.Kp[2][2]*form_yaw_err_2*(1-dr) - 0*self.Kv[2][2]*(self.mocap_odom_omega[2] - lead_omega[0][2])) - self.Cv[2][2]*(self.odom_omega[2]-self.team_des_vel[2])
+                        print("euler: ",self.mocap_odom_eul[2], " cmd: ", cmd_yaw)
 
-                    if(self.laplacian[self.robot][ii]==1):
-                        print("robot cmd: ",mu_x,mu_y, mu_r)
+
+                   # if(self.laplacian[self.robot][ii]==1):
+                    #    print("robot cmd: ",mu_x,mu_y, mu_r)
 
                     u_cmd += np.array([mu_x,mu_y,mu_r])
                     
@@ -193,7 +197,6 @@ class swarmNode(createSwarm):
 #                    curr_err[2] = wrapToPi(self.mocap_odom_eul[2]-self.team_des_pose[2])
 
                     wp_psi = math.atan2(-err[1],-err[0])
-                    print("euler: ",self.mocap_odom_eul[2])
 
                     psi_err = wrapToPi(self.mocap_odom_eul[2]-wp_psi)
                     
@@ -202,12 +205,12 @@ class swarmNode(createSwarm):
                     self.psi_dist = self.psi_dist + self.w*self.dt  
 
                     psi_err_2 = wrapToPi(self.mocap_odom_eul[2]-wrapToPi(self.team_des_pose[2]+self.psi_dist))
-                    ux = -self.Cp[0][0]*err[0] + self.team_des_vel[0]
-                    uy = -self.Cp[1][1]*err[1] + self.team_des_vel[1]
-                    ur = -self.Cp[2][2]*psi_err - self.Cp[2][2]*psi_err_2 - self.Cv[2][2]*(self.odom_omega[2]-self.team_des_vel[2])
+                    ux = -self.Cp[0][0]*err[0] #- self.Cv[0][0]*(self.mocap_odom_vel_g[0] - self.team_des_vel[0])
+                    uy = -self.Cp[1][1]*err[1] #- self.Cv[1][1]*(self.mocap_odom_vel_g[1] - self.team_des_vel[1])
+                    ur = -self.Cp[2][2]*psi_err - self.Cp[2][2]*psi_err_2 #- self.Cv[2][2]*(self.odom_omega[2]-self.team_des_vel[2])
                     #w[k+1] = w[k] + eta*(wStar - w[k])*dt + np.sqrt(dt)*sigma*np.random.randn()  
 
-                    print("error des_yaw and yaw_dist:",math.sqrt(err[0]**2 + err[1]**2), self.psi_dist)
+                   # print("error des_yaw and yaw_dist:",math.sqrt(err[0]**2 + err[1]**2), self.psi_dist)
 
                   #  print("error des_yaw and yaw_dist:",math.sqrt(err[0]**2 + err[1]**2), psi_err)
                     u_cmd += np.array([ux,uy,ur])
@@ -224,14 +227,14 @@ class swarmNode(createSwarm):
                 cmd_yaw_rate = vel_cmd[2]
 
 
-                cmd_spd = saturation(cmd_spd,1.0,-0.1)
-                cmd_yaw_rate = saturation(cmd_yaw_rate,1.57,-1.57)
+                cmd_spd = saturation(cmd_spd,0.2,-0.2)
+                cmd_yaw_rate = saturation(cmd_yaw_rate,0.8,-0.8)
 
                 #slow_scale = abs(cmd_spd)/abs(cmd_yaw_rate)
                 #3slow_scale = saturation(slow_scale,0.5,1.0)
                 #cmd_spd = cmd_spd*slow_scale
 
-                print(cmd_spd,cmd_yaw_rate)
+                #print(cmd_spd,cmd_yaw_rate)
                 #if(dist > self.wp_radius):
                 #if(True):
                 self.set_velcmd(cmd_spd,cmd_yaw_rate)

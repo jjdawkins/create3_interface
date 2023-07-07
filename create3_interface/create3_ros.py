@@ -119,9 +119,16 @@ class IRobotCreate(Node):
         self.imu_quat = np.quaternion(1,0,0,0)
         self.imu_eul = np.zeros(3)
 
-        self.mocap_pos = np.zeros(3)
-        self.mocap_quat = np.quaternion(1,0,0,0)
-        self.mocap_eul = np.zeros(3)
+        self.mocap_pose_pos = np.zeros(3)
+        self.mocap_pose_quat = np.quaternion(1,0,0,0)
+        self.mocap_pose_eul = np.zeros(3)
+
+        self.mocap_odom_pos = np.zeros(3)
+        self.mocap_odom_quat = np.quaternion(1,0,0,0)
+        self.mocap_odom_eul = np.zeros(3)
+        self.mocap_odom_vel =np.zeros(3)
+        self.mocap_odom_vel_g = np.zeros(3)
+        self.mocap_odom_omega = np.zeros(3)       
 
         self.odom_pos = np.zeros(3)
         self.odom_quat = np.quaternion(1,0,0,0)
@@ -153,7 +160,7 @@ class IRobotCreate(Node):
 
         # Set up Action clients
         self.undock_act = ActionClient(self,Undock,self.name_prefix+'/undock')
-        self.dock_act = ActionClient(self,DockServo,self.name_prefix+'/dock')
+       # self.dock_act = ActionClient(self,DockServo,self.name_prefix+'/dock')
 
         # Set up Sensor Subscribers
         self.ir_sens_sub = self.create_subscription(IrIntensityVector,self.name_prefix+'/ir_intensity',self.ir_intensity_callback,qos_profile)
@@ -161,8 +168,8 @@ class IRobotCreate(Node):
         self.odom_sub = self.create_subscription(Odometry,self.name_prefix+'/odom',self.odom_callback,qos_profile)
         self.wheel_tick_sub = self.create_subscription(WheelTicks,self.name_prefix+'/wheel_ticks',self.wheeltick_callback,qos_profile)
         self.wheel_vel_sub = self.create_subscription(WheelVels,self.name_prefix+'/wheel_vels',self.wheelvels_callback,qos_profile)
-        self.mocap_sub = self.create_subscription(PoseStamped,self.name_prefix+'/pose',self.mocap_callback,qos_profile)
-
+        self.mocap_pose_sub = self.create_subscription(PoseStamped,self.name_prefix+'/pose',self.mocap_pose_callback,qos_profile)
+        self.mocap_odom_sub = self.create_subscription(Odometry,self.name_prefix+'/mocap/odom',self.mocap_odom_callback,qos_profile)
         # Set up Status Subscribers
         self.batt_sub = self.create_subscription(BatteryState,self.name_prefix+'/battery_state',self.battery_callback,qos_profile)
         self.button_sub = self.create_subscription(InterfaceButtons,self.name_prefix+'/interface_buttons',self.button_callback,qos_profile)
@@ -172,7 +179,7 @@ class IRobotCreate(Node):
         self.kidnap_sub = self.create_subscription(KidnapStatus,self.name_prefix+'/kidnap_status',self.kidnap_callback,qos_profile)
         self.slip_sub = self.create_subscription(SlipStatus,self.name_prefix+'/slip_status',self.slip_callback,qos_profile)
         self.stop_sub = self.create_subscription(StopStatus,self.name_prefix+'/stop_status',self.stop_callback,qos_profile)
-        self.dock_sub = self.create_subscription(Dock,self.name_prefix+'/dock',self.dock_callback,qos_profile)
+       # self.dock_sub = self.create_subscription(Dock,self.name_prefix+'/dock',self.dock_callback,qos_profile)
 
         time.sleep(1)
         timer_period = 0.1  # seconds
@@ -207,24 +214,50 @@ class IRobotCreate(Node):
         self.imu_eul[0] = math.atan2(R[2][1],R[2][2])
 
 
-    def mocap_callback(self,msg):
+    def mocap_pose_callback(self,msg):
         """Establishes a callback function to parse mocap data
-
+self.mocap_odom_omega[0] 
         Establishes a callback function to parse mocap data as
         it is published by the create3 and updates the class
         variables accordingly.
         """
 
-        self.mocap_pos[0] = msg.pose.position.x
-        self.mocap_pos[1] = msg.pose.position.y
-        self.mocap_pos[2] = msg.pose.position.z
+        self.mocap_pose_pos[0] = msg.pose.position.x
+        self.mocap_pose_pos[1] = msg.pose.position.y
+        self.mocap_pose_pos[2] = msg.pose.position.z
 
-        self.mocap_quat = np.quaternion(msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z)
-        R = quaternion.as_rotation_matrix(self.mocap_quat)
+        self.mocap_pose_quat = np.quaternion(msg.pose.orientation.w,msg.pose.orientation.x,msg.pose.orientation.y,msg.pose.orientation.z)
+        R = quaternion.as_rotation_matrix(self.mocap_pose_quat)
 
-        self.mocap_eul[2] =  math.atan2(R[1][0],R[0][0])
-        self.mocap_eul[1] = -math.asin(R[2][0])
-        self.mocap_eul[0] = math.atan2(R[2][1],R[2][2])
+        self.mocap_pose_eul[2] =  math.atan2(R[1][0],R[0][0])
+        self.mocap_pose_eul[1] = -math.asin(R[2][0])
+        self.mocap_pose_eul[0] = math.atan2(R[2][1],R[2][2])
+
+    def mocap_odom_callback(self,msg):
+        self.mocap_odom_pos[0] = msg.pose.pose.position.x
+        self.mocap_odom_pos[1] = msg.pose.pose.position.y
+        self.mocap_odom_pos[2] = msg.pose.pose.position.z
+
+        self.mocap_odom_quat = np.quaternion(msg.pose.pose.orientation.w,msg.pose.pose.orientation.x,msg.pose.pose.orientation.y,msg.pose.pose.orientation.z)
+        R = quaternion.as_rotation_matrix(self.mocap_odom_quat)
+
+        self.mocap_odom_eul[2] =  math.atan2(R[1][0],R[0][0])
+        self.mocap_odom_eul[1] = -math.asin(R[2][0])
+        self.mocap_odom_eul[0] = math.atan2(R[2][1],R[2][2])
+
+        vel_b = np.quaternion(0,msg.twist.twist.linear.x,msg.twist.twist.linear.y,msg.twist.twist.linear.z)
+        vel_g =  (self.mocap_odom_quat)*vel_b*np.conjugate(self.mocap_odom_quat)
+
+        self.mocap_odom_vel[0] = msg.twist.twist.linear.x
+        self.mocap_odom_vel[1] = msg.twist.twist.linear.y
+        self.mocap_odom_vel[2] = msg.twist.twist.linear.z
+
+        self.mocap_odom_vel_g[0] = vel_g.x
+        self.mocap_odom_vel_g[1] = vel_g.y
+        self.mocap_odom_vel_g[2] = vel_g.z
+        self.mocap_odom_omega[0] = msg.twist.twist.angular.x
+        self.mocap_odom_omega[1] = msg.twist.twist.angular.y
+        self.mocap_odom_omega[2] = msg.twist.twist.angular.z
 
     def odom_callback(self,msg):
         """Establishes a callback function to parse odom data
@@ -486,7 +519,7 @@ class IRobotCreate(Node):
         self.undock_act.send_goal_async(goal_msg)
 
     def dock(self):
-        goal_msg = DockServo.Goal()
+        #goal_msg = DockServo.Goal()
         #print(goal_msg)
         print("waiting for server")
         self.dock_act.wait_for_server()
