@@ -160,28 +160,28 @@ class IRobotCreate(Node):
         self.audio_pub = self.create_publisher(AudioNoteVector,self.name_prefix+'/cmd_audio', qos_profile)
 
         # Set up Action clients
-        #self.undock_act = ActionClient(self,Undock,self.name_prefix+'/undock')
-        #self.dock_act = ActionClient(self,DockServo,self.name_prefix+'/dock')
+        self.undock_act = ActionClient(self,Undock,self.name_prefix+'/undock')
+        self.dock_act = ActionClient(self,DockServo,self.name_prefix+'/dock')
 
         # Set up Sensor Subscribers
         self.ir_sens_sub = self.create_subscription(IrIntensityVector,self.name_prefix+'/ir_intensity',self.ir_intensity_callback,qos_profile)
         self.imu_sub = self.create_subscription(Imu,self.name_prefix+'/imu',self.imu_callback,qos_profile)
         self.odom_sub = self.create_subscription(Odometry,self.name_prefix+'/odom',self.odom_callback,qos_profile)
-        #self.wheel_tick_sub = self.create_subscription(WheelTicks,self.name_prefix+'/wheel_ticks',self.wheeltick_callback,qos_profile)
-        #self.wheel_vel_sub = self.create_subscription(WheelVels,self.name_prefix+'/wheel_vels',self.wheelvels_callback,qos_profile)
+        self.wheel_tick_sub = self.create_subscription(WheelTicks,self.name_prefix+'/wheel_ticks',self.wheeltick_callback,qos_profile)
+        self.wheel_vel_sub = self.create_subscription(WheelVels,self.name_prefix+'/wheel_vels',self.wheelvels_callback,qos_profile)
         self.mocap_pos_sub = self.create_subscription(PoseStamped,self.name_prefix+'/pose',self.mocap_pose_callback,qos_profile)
         self.mocap_odom_sub = self.create_subscription(Odometry,self.name_prefix+'/mocap/odom',self.mocap_odom_callback,qos_profile)
 
         # Set up Status Subscribers
-        #self.batt_sub = self.create_subscription(BatteryState,self.name_prefix+'/battery_state',self.battery_callback,qos_profile)
-        #self.button_sub = self.create_subscription(InterfaceButtons,self.name_prefix+'/interface_buttons',self.button_callback,qos_profile)
-        #self.mouse_sub = self.create_subscription(Mouse,self.name_prefix+'/mouse',self.mouse_callback,qos_profile)
-        #self.wheel_status_sub = self.create_subscription(WheelStatus,self.name_prefix+'/wheel_status',self.wheel_status_callback,qos_profile)
-        #self.hazard_Sub = self.create_subscription(HazardDetectionVector,self.name_prefix+'/hazard_detection',self.hazard_callback,qos_profile)
-        #self.kidnap_sub = self.create_subscription(KidnapStatus,self.name_prefix+'/kidnap_status',self.kidnap_callback,qos_profile)
-        #self.slip_sub = self.create_subscription(SlipStatus,self.name_prefix+'/slip_status',self.slip_callback,qos_profile)
-        #self.stop_sub = self.create_subscription(StopStatus,self.name_prefix+'/stop_status',self.stop_callback,qos_profile)
-        #self.dock_sub = self.create_subscription(Dock,self.name_prefix+'/dock',self.dock_callback,qos_profile)
+        self.batt_sub = self.create_subscription(BatteryState,self.name_prefix+'/battery_state',self.battery_callback,qos_profile)
+        self.button_sub = self.create_subscription(InterfaceButtons,self.name_prefix+'/interface_buttons',self.button_callback,qos_profile)
+        self.mouse_sub = self.create_subscription(Mouse,self.name_prefix+'/mouse',self.mouse_callback,qos_profile)
+        self.wheel_status_sub = self.create_subscription(WheelStatus,self.name_prefix+'/wheel_status',self.wheel_status_callback,qos_profile)
+        self.hazard_Sub = self.create_subscription(HazardDetectionVector,self.name_prefix+'/hazard_detection',self.hazard_callback,qos_profile)
+        self.kidnap_sub = self.create_subscription(KidnapStatus,self.name_prefix+'/kidnap_status',self.kidnap_callback,qos_profile)
+        self.slip_sub = self.create_subscription(SlipStatus,self.name_prefix+'/slip_status',self.slip_callback,qos_profile)
+        self.stop_sub = self.create_subscription(StopStatus,self.name_prefix+'/stop_status',self.stop_callback,qos_profile)
+        self.dock_sub = self.create_subscription(Dock,self.name_prefix+'/dock',self.dock_callback,qos_profile)
 
         time.sleep(1)
         timer_period = 0.1  # seconds
